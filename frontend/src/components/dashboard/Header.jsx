@@ -17,7 +17,7 @@ export const Header = ({ activeTab, setActiveTab }) => {
       <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
         <div className="flex items-center gap-3">
           {/* Custom MineGuard AI Shield & Pulse Logo */}
-          <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md shadow-indigo-500/20 flex-shrink-0 bg-slate-900 flex items-center justify-center border border-indigo-500/30">
+          <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm flex-shrink-0 bg-indigo-50 dark:bg-slate-900 flex items-center justify-center border border-indigo-200 dark:border-indigo-800">
             <img src="/favicon.svg" alt="MineGuard AI Logo" className="w-full h-full p-1 transform hover:scale-105 transition-transform" />
           </div>
           <div>
