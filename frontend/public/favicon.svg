@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+    <linearGradient id="pulseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#F59E0B" />
+    </linearGradient>
+  </defs>
+
+  <!-- Shield Outer Shell -->
+  <path d="M50 8 L15 25 V50 C15 72.5 50 92 50 92 C50 92 85 72.5 85 50 V25 L50 8 Z" fill="url(#shieldGrad)" />
+  
+  <!-- Inner Shield Glow -->
+  <path d="M50 14 L22 29 V50 C22 68 50 84 50 84 C50 84 78 68 78 50 V29 L50 14 Z" fill="#0F172A" opacity="0.4" />
+  
+  <!-- Mine Safety Pulse Line -->
+  <path d="M30 52 H40 L45 38 L52 64 L58 46 L63 52 H70" stroke="url(#pulseGrad)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Warning Halo Dot -->
+  <circle cx="50" cy="28" r="4" fill="#EF4444" />
+</svg>
