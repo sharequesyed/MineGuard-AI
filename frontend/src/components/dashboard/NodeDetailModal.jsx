@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Battery, Wifi, ShieldAlert, Activity, Compass, MoveVertical, Split, Scale } from 'lucide-react';
+import { X, Battery, Compass, MoveVertical, Split, Activity } from 'lucide-react';
 import { RiskBadge } from '../ui/RiskBadge';
 import { SENSOR_NODES_CONFIG, getRiskLevel } from '../../utils/constants';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
@@ -26,69 +26,69 @@ export const NodeDetailModal = ({ nodeId, nodeData = {}, onClose }) => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="glass-panel w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 border-indigo-500/30">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-xs">
+      <div className="glass-panel w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl p-4 sm:p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 border-indigo-500/30">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
 
         {/* Modal Header */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-extrabold text-lg shadow-md">
+        <div className="flex items-center gap-3 mb-4 pr-8">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-base sm:text-lg shadow-md flex-shrink-0">
             {config.id}
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">{config.name}</h2>
-              <RiskBadge level={level} score={score} size="md" />
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white">{config.name}</h2>
+              <RiskBadge level={level} score={score} size="sm" />
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Location: {config.location} | Depth: {config.depth} | Telemetry: <strong>LoRa 868MHz</strong>
+            <p className="text-[11px] sm:text-xs font-semibold text-slate-600 dark:text-slate-400">
+              Location: {config.location} | Depth: {config.depth}
             </p>
           </div>
         </div>
 
         {/* Sensor Metrics Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-4">
-          <div className="p-3 rounded-xl bg-slate-100/70 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-800">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
-              <Compass className="w-4 h-4 text-indigo-500" /> Tilt Angle
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 my-4">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400 font-bold mb-1">
+              <Compass className="w-3.5 h-3.5 text-indigo-500" /> Tilt Angle
             </div>
-            <div className="text-lg font-extrabold text-slate-900 dark:text-white">{nodeData.tilt ?? 0.8}°</div>
+            <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white">{nodeData.tilt ?? 0.8}°</div>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-100/70 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-800">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
-              <MoveVertical className="w-4 h-4 text-emerald-500" /> Roof Disp.
+          <div className="p-2.5 sm:p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400 font-bold mb-1">
+              <MoveVertical className="w-3.5 h-3.5 text-emerald-500" /> Roof Disp.
             </div>
-            <div className="text-lg font-extrabold text-slate-900 dark:text-white">{nodeData.displacement ?? 1.2} mm</div>
+            <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white">{nodeData.displacement ?? 1.2} mm</div>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-100/70 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-800">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
-              <Split className="w-4 h-4 text-amber-500" /> Crack Width
+          <div className="p-2.5 sm:p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400 font-bold mb-1">
+              <Split className="w-3.5 h-3.5 text-amber-500" /> Crack Width
             </div>
-            <div className="text-lg font-extrabold text-slate-900 dark:text-white">{nodeData.crack_width ?? 0.2} mm</div>
+            <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white">{nodeData.crack_width ?? 0.2} mm</div>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-100/70 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-800">
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
-              <Activity className="w-4 h-4 text-rose-500" /> Vibration
+          <div className="p-2.5 sm:p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400 font-bold mb-1">
+              <Activity className="w-3.5 h-3.5 text-rose-500" /> Vibration
             </div>
-            <div className="text-lg font-extrabold text-slate-900 dark:text-white">{nodeData.vibration ?? 0.08} g</div>
+            <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white">{nodeData.vibration ?? 0.08} g</div>
           </div>
         </div>
 
         {/* Node Historical Displacement Chart */}
         <div className="mt-4">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+          <h4 className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
             Displacement Trend ({config.id})
           </h4>
-          <div className="h-40 w-full bg-slate-50 dark:bg-slate-900/50 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className="h-36 sm:h-40 w-full bg-slate-50 dark:bg-slate-900/50 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData}>
                 <XAxis dataKey="time" stroke="#94A3B8" fontSize={10} />
@@ -101,16 +101,16 @@ export const NodeDetailModal = ({ nodeId, nodeData = {}, onClose }) => {
         </div>
 
         {/* Modal Footer */}
-        <div className="mt-5 pt-3 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between text-xs text-slate-500">
-          <div className="flex items-center gap-2">
-            <Battery className="w-4 h-4 text-emerald-500" />
-            <span>Battery: <strong>{nodeData.battery ?? 94}% (3.82V)</strong></span>
+        <div className="mt-4 pt-3 border-t border-slate-300/60 dark:border-slate-800/60 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 font-bold">
+          <div className="flex items-center gap-1.5">
+            <Battery className="w-4 h-4 text-emerald-600" />
+            <span>Battery: <strong>{nodeData.battery ?? 94}%</strong></span>
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-lg font-semibold hover:bg-slate-300 dark:hover:bg-slate-700 transition cursor-pointer"
+            className="px-3.5 py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition cursor-pointer"
           >
-            Close Panel
+            Close
           </button>
         </div>
       </div>
