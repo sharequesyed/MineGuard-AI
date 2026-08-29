@@ -1,0 +1,24 @@
+# Node.js / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+.vercel/
+*.log
+
+# Python / Backend / AI
+__pycache__/
+*.py[cod]
+*$py.class
+backend/mineguard.db
+backend/__pycache__/
+app/__pycache__/
+ai-model/**/__pycache__/
+.env
+.env.local
+.venv/
+venv/
+
+# IDE / System
+.vscode/
+.idea/
+.DS_Store
