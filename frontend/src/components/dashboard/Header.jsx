@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, Activity, Radio, Clock } from 'lucide-react';
+import { Activity, Radio, Clock } from 'lucide-react';
 import { ThemeToggle } from '../ui/ThemeToggle';
 
 export const Header = ({ activeTab, setActiveTab }) => {
@@ -16,12 +16,13 @@ export const Header = ({ activeTab, setActiveTab }) => {
     <header className="glass-panel sticky top-0 z-40 border-b border-slate-300/80 dark:border-slate-800/80 px-4 lg:px-8 py-3.5 mb-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
       <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-600/20">
-            <ShieldAlert className="w-6 h-6 animate-pulse" />
+          {/* Custom MineGuard AI Shield & Pulse Logo */}
+          <div className="w-10 h-10 rounded-xl overflow-hidden shadow-md shadow-indigo-500/20 flex-shrink-0 bg-slate-900 flex items-center justify-center border border-indigo-500/30">
+            <img src="/favicon.svg" alt="MineGuard AI Logo" className="w-full h-full p-1 transform hover:scale-105 transition-transform" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
                 MineGuard AI
               </h1>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800">
