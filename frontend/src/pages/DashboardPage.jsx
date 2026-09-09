@@ -7,6 +7,7 @@ import { AlertPanel } from '../components/dashboard/AlertPanel';
 import { SensorCard } from '../components/dashboard/SensorCard';
 import { SensorCharts } from '../components/dashboard/SensorCharts';
 import { NodeDetailModal } from '../components/dashboard/NodeDetailModal';
+import { DashboardAlertBanner } from '../components/dashboard/DashboardAlertBanner';
 import { SENSOR_NODES_CONFIG, getRiskLevel } from '../utils/constants';
 import { useDemoMode } from '../context/DemoContext';
 import { ShieldAlert, Cpu, AlertTriangle, Radio, RefreshCw } from 'lucide-react';
@@ -163,27 +164,34 @@ export const DashboardPage = () => {
         return updated;
       });
 
-      // Auto-trigger alerts when N5 or N3 hit HIGH or CRITICAL
-      if (n5 && (n5.risk_level === 'HIGH' || n5.risk_level === 'CRITICAL')) {
-        setAlerts((prevAlerts) => {
-          const exists = prevAlerts.some((a) => a.node_id === 'N5' && a.score === n5.risk_score);
-          if (!exists) {
-            return [
-              {
-                id: `ALT-${Date.now().toString().slice(-4)}`,
-                node_id: 'N5',
-                level: n5.risk_level,
-                score: n5.risk_score,
-                reason: n5.risk_level === 'CRITICAL' ? 'SEVERE SUBSIDENCE RISK' : 'Accelerating Roof Displacement',
-                details: `Node N5 registered ${n5.displacement}mm displacement and ${n5.tilt}° tilt angle change.`,
-                timestamp: timeStr
-              },
-              ...prevAlerts.slice(0, 8)
-            ];
-          }
-          return prevAlerts;
-        });
-      }
+      // Auto-trigger alerts when any node hits MEDIUM, HIGH or CRITICAL
+      Object.entries(freshNodes).forEach(([nodeId, data]) => {
+        if (data.risk_level === 'MEDIUM' || data.risk_level === 'HIGH' || data.risk_level === 'CRITICAL') {
+          setAlerts((prevAlerts) => {
+            const exists = prevAlerts.some((a) => a.node_id === nodeId && a.score === data.risk_score);
+            if (!exists) {
+              return [
+                {
+                  id: `ALT-${Date.now().toString().slice(-4)}`,
+                  node_id: nodeId,
+                  level: data.risk_level,
+                  score: data.risk_score,
+                  reason:
+                    data.risk_level === 'CRITICAL'
+                      ? 'SEVERE SUBSIDENCE EMERGENCY'
+                      : data.risk_level === 'HIGH'
+                      ? 'Accelerating Roof Displacement'
+                      : 'Elevated Tilt Drift Rate',
+                  details: `Node ${nodeId} registered ${data.displacement}mm displacement and ${data.tilt}° tilt angle change in underground seam.`,
+                  timestamp: timeStr
+                },
+                ...prevAlerts.slice(0, 8)
+              ];
+            }
+            return prevAlerts;
+          });
+        }
+      });
     };
 
     updateTick();
@@ -204,6 +212,19 @@ export const DashboardPage = () => {
     <div className="space-y-6">
       {/* SIH Emergency Demo Controller */}
       <DemoControlBar />
+
+      {/* Dynamic Warning & Critical Dashboard Alert Banner */}
+      <DashboardAlertBanner
+        nodesData={nodesData}
+        maxRiskScore={maxRiskScore}
+        overallMineLevel={overallMineLevel}
+        demoMode={demoMode}
+        onAcknowledgeAlert={() => {
+          if (alerts.length > 0) {
+            setAlerts((prev) => prev.slice(1));
+          }
+        }}
+      />
 
       {/* Summary KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">

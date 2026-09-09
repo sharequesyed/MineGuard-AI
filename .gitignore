@@ -18,6 +18,9 @@ ai-model/**/__pycache__/
 .venv/
 venv/
 
+# Private SIH Judge Q&A & Team Guides (DO NOT PUSH TO GITHUB)
+team_sih_prep/
+
 # IDE / System
 .vscode/
 .idea/
