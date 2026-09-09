@@ -164,9 +164,9 @@ export const DashboardPage = () => {
         return updated;
       });
 
-      // Auto-trigger alerts when any node hits MEDIUM, HIGH or CRITICAL
+      // Auto-trigger alerts when any node hits score > 40 or MEDIUM, HIGH or CRITICAL level
       Object.entries(freshNodes).forEach(([nodeId, data]) => {
-        if (data.risk_level === 'MEDIUM' || data.risk_level === 'HIGH' || data.risk_level === 'CRITICAL') {
+        if ((data.risk_score || 0) > 40 || (data.displacement || 0) > 40 || data.risk_level === 'MEDIUM' || data.risk_level === 'HIGH' || data.risk_level === 'CRITICAL') {
           setAlerts((prevAlerts) => {
             const exists = prevAlerts.some((a) => a.node_id === nodeId && a.score === data.risk_score);
             if (!exists) {
