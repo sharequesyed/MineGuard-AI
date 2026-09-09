@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertTriangle, ShieldAlert, Siren, Volume2, VolumeX, CheckCircle, X, Send, Monitor, Bell } from 'lucide-react';
+import { AlertTriangle, ShieldAlert, Siren, Volume2, VolumeX, CheckCircle, X, Send, Monitor, Bell, BellOff, Info } from 'lucide-react';
 import { RiskBadge } from '../ui/RiskBadge';
 
 export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overallMineLevel = 'LOW', demoMode = 'NORMAL', onAcknowledgeAlert }) => {
@@ -31,58 +31,87 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
   const targetNodeId = activeNodeInfo[0];
   const targetData = activeNodeInfo[1] || {};
 
-  // Function to dispatch Native Computer Desktop Notification
-  const triggerComputerNotification = (force = false) => {
+  // Request browser Web Notification Permission explicitly
+  const requestWebNotificationPermission = async () => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
-      alert('Browser does not support Native Computer Desktop Notifications.');
-      return;
+      alert('Browser does not support Web Desktop Notifications.');
+      return 'unsupported';
     }
 
-    const dispatch = () => {
-      const now = Date.now();
-      // Throttle automatic desktop notifications to once every 12 seconds unless forced
-      if (!force && now - lastNotificationTimeRef.current < 12000) return;
-      lastNotificationTimeRef.current = now;
-
-      const title = isCritical
-        ? `🚨 CRITICAL MINE SUBSIDENCE HAZARD - Node ${targetNodeId}`
-        : `⚠️ WARNING: Mine Strata Acceleration - Node ${targetNodeId}`;
-
-      const options = {
-        body: isCritical
-          ? `[EMERGENCY ALERT] Node ${targetNodeId} in Panel C registered ${targetData.displacement || 12.8}mm displacement & ${targetData.tilt || 4.5}° tilt. High risk of immediate roof fall!`
-          : `[WARNING ALERT] Elevated tilt rate (${targetData.tilt || 1.8}°) and displacement (${targetData.displacement || 3.5}mm) registered at Panel C.`,
-        icon: '/favicon.svg',
-        tag: `mineguard-${isCritical ? 'critical' : 'warning'}-${targetNodeId}`,
-        requireInteraction: isCritical
-      };
-
-      try {
-        const notif = new Notification(title, options);
-        notif.onclick = () => {
-          window.focus();
-        };
-        setDesktopNotified(true);
-      } catch (err) {
-        console.warn('Could not launch computer desktop notification:', err);
+    try {
+      const perm = await Notification.requestPermission();
+      setPermissionStatus(perm);
+      if (perm === 'granted') {
+        // Dispatch test confirmation notification
+        new Notification('MineGuard AI: Web Notifications Enabled', {
+          body: 'You will receive immediate computer notifications containing full criticality details whenever Warning or Critical mine hazards occur.',
+          icon: '/favicon.svg'
+        });
       }
-    };
-
-    if (Notification.permission === 'granted') {
-      dispatch();
-    } else if (Notification.permission !== 'denied') {
-      Notification.requestPermission().then((perm) => {
-        setPermissionStatus(perm);
-        if (perm === 'granted') {
-          dispatch();
-        }
-      });
-    } else {
-      alert('Desktop notification permission was denied in your browser settings. Please enable notifications for this site to receive computer alerts.');
+      return perm;
+    } catch (e) {
+      console.warn('Error requesting notification permission:', e);
+      return Notification.permission;
     }
   };
 
-  // Auto-send Computer Desktop Notification when alert state triggers/changes
+  // Dispatch Native Web Desktop Notification with full criticality details
+  const triggerComputerNotification = async (force = false) => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+
+    let currentPerm = Notification.permission;
+
+    // Step 1: Take permission first if status is 'default'
+    if (currentPerm === 'default') {
+      currentPerm = await requestWebNotificationPermission();
+    }
+
+    if (currentPerm !== 'granted') {
+      return;
+    }
+
+    const now = Date.now();
+    // Throttle automatic background notifications to once every 10 seconds unless forced by button click
+    if (!force && now - lastNotificationTimeRef.current < 10000) return;
+    lastNotificationTimeRef.current = now;
+
+    const riskScore = targetData.risk_score || maxRiskScore;
+    const levelStr = isCritical ? 'CRITICAL EMERGENCY' : 'WARNING HAZARD';
+    const locationStr = targetNodeId === 'N5' ? 'Panel C - High Stress Zone' : targetNodeId === 'N3' ? 'Panel B - Active Extraction' : 'Underground Mine Seam';
+
+    const title = isCritical
+      ? `🚨 [CRITICAL SUBSIDENCE HAZARD] Node ${targetNodeId}`
+      : `⚠️ [WARNING STRAIN ALERT] Node ${targetNodeId}`;
+
+    // Rich criticality details inside Web Notification body
+    const bodyContent =
+      `CRITICALITY INFO:\n` +
+      `• Level: ${levelStr} (Risk Score: ${riskScore}/100)\n` +
+      `• Location: ${locationStr}\n` +
+      `• Displacement: ${targetData.displacement ?? 12.8}mm | Tilt: ${targetData.tilt ?? 4.5}°\n` +
+      `• Crack Growth: ${targetData.crack_width ?? 5.2}mm | Load: +${targetData.load_change ?? 55.0}kN\n` +
+      `• Required Action: ${isCritical ? 'IMMEDIATE UNDERGROUND EVACUATION REQUIRED!' : 'Increase strata monitoring & alert Panel C supervisor.'}`;
+
+    const options = {
+      body: bodyContent,
+      icon: '/favicon.svg',
+      tag: `mineguard-hazard-${isCritical ? 'critical' : 'warning'}-${targetNodeId}`,
+      requireInteraction: isCritical, // Keeps critical notifications open on screen until clicked
+      renotify: true
+    };
+
+    try {
+      const notif = new Notification(title, options);
+      notif.onclick = () => {
+        window.focus();
+      };
+      setDesktopNotified(true);
+    } catch (err) {
+      console.warn('Failed to construct Web Notification:', err);
+    }
+  };
+
+  // Auto-trigger permission & web notification when Warning or Critical hazard hits
   useEffect(() => {
     if (isCritical || isWarning) {
       setDismissed(false);
@@ -91,7 +120,7 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
     }
   }, [isCritical, isWarning, demoMode, maxRiskScore]);
 
-  // Audio Siren Synthesis using Web Audio API
+  // Web Audio Siren Synthesis
   const toggleSiren = () => {
     if (sirenPlaying) {
       stopSiren();
@@ -117,7 +146,6 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
       osc.type = isCritical ? 'sawtooth' : 'sine';
       osc.frequency.setValueAtTime(isCritical ? 880 : 587.33, ctx.currentTime);
 
-      // Dual-tone siren sweep
       let toggle = false;
       const interval = setInterval(() => {
         if (!oscRef.current) {
@@ -154,14 +182,12 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
     setSirenPlaying(false);
   };
 
-  // Clean up audio on unmount
   useEffect(() => {
     return () => {
       stopSiren();
     };
   }, []);
 
-  // Handle SMS simulation
   const handleSendSMS = () => {
     setSmsSent(true);
     setTimeout(() => {
@@ -169,7 +195,6 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
     }, 200);
   };
 
-  // If no alert condition or user dismissed, don't show active alert banner
   if ((!isCritical && !isWarning) || dismissed) {
     return null;
   }
@@ -212,9 +237,18 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
 
               <RiskBadge level={isCritical ? 'CRITICAL' : 'HIGH'} score={maxRiskScore} size="sm" />
 
-              <span className="text-xs font-mono text-slate-300 bg-black/40 px-2 py-0.5 rounded-md border border-white/10 flex items-center gap-1">
-                <Bell className="w-3 h-3 text-amber-400" /> PC Notification Active
-              </span>
+              {permissionStatus === 'granted' ? (
+                <span className="text-xs font-mono text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-500/30 flex items-center gap-1">
+                  <Bell className="w-3 h-3 text-emerald-400" /> Web Notification Active
+                </span>
+              ) : (
+                <button
+                  onClick={requestWebNotificationPermission}
+                  className="text-xs font-bold text-amber-200 bg-amber-950/90 hover:bg-amber-900 px-2.5 py-0.5 rounded-md border border-amber-400/50 flex items-center gap-1 cursor-pointer"
+                >
+                  <BellOff className="w-3 h-3 text-amber-300 animate-pulse" /> Grant Notification Permission
+                </button>
+              )}
             </div>
 
             <h3 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
@@ -223,17 +257,23 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
                 : `WARNING ALERT — Strata Drift Acceleration at Node ${targetNodeId}`}
             </h3>
 
-            <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
-              {isCritical ? (
+            {/* Criticality Info Summary Box */}
+            <div className="bg-black/30 rounded-lg p-2.5 mt-1 border border-white/10 text-xs sm:text-sm text-slate-200 space-y-1">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px] sm:text-xs">
+                <div>Displacement: <strong className="text-amber-300">{targetData.displacement || 12.8}mm</strong></div>
+                <div>Tilt Angle: <strong className="text-amber-300">{targetData.tilt || 4.5}°</strong></div>
+                <div>Crack Width: <strong className="text-amber-300">{targetData.crack_width || 5.2}mm</strong></div>
+                <div>Load Change: <strong className="text-amber-300">+{targetData.load_change || 55.0}kN</strong></div>
+              </div>
+              <p className="text-xs text-slate-300 border-t border-white/10 pt-1.5 flex items-center gap-1.5">
+                <Info className="w-4 h-4 text-amber-400 flex-shrink-0" />
                 <span>
-                  High-velocity displacement (<strong>{targetData.displacement || 12.8}mm</strong>) & tilt (<strong>{targetData.tilt || 4.5}°</strong>) registered at <strong>Panel C High Stress Zone</strong>. High probability of immediate roof fall! Computer desktop alert dispatched.
+                  {isCritical
+                    ? 'IMMEDIATE ACTION: Underground seam evacuation recommended. Web notification dispatched to computer desktop.'
+                    : 'RECOMMENDED ACTION: Increase strata monitoring frequency & alert Panel C safety engineer.'}
                 </span>
-              ) : (
-                <span>
-                  Elevated tilt angle change (<strong>{targetData.tilt || 1.8}°</strong>) and displacement rate (<strong>{targetData.displacement || 3.5}mm</strong>) detected. Computer warning alert active.
-                </span>
-              )}
-            </p>
+              </p>
+            </div>
           </div>
         </div>
 
@@ -242,10 +282,10 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
           <button
             onClick={() => triggerComputerNotification(true)}
             className="px-3 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-md bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400"
-            title="Push Native Computer Desktop Notification Alert"
+            title="Push Web Notification with Full Criticality Info to Computer Desktop"
           >
             <Monitor className="w-4 h-4 text-white animate-pulse" />
-            <span>{desktopNotified ? 'Resend PC Alert' : 'Send PC Notification'}</span>
+            <span>{desktopNotified ? 'Resend Web Notif' : 'Send Web Notif'}</span>
           </button>
 
           <button
