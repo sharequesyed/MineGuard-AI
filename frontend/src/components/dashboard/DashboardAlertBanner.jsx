@@ -15,24 +15,19 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
   const oscRef = useRef(null);
   const lastNotificationTimeRef = useRef(0);
 
-  // Identify nodes that triggered Warning or Critical state or exceeded 40 subsidence threshold
-  const criticalNodes = Object.entries(nodesData).filter(([_, data]) => (data.risk_score || 0) >= 75 || data.risk_level === 'CRITICAL');
-  const warningNodes = Object.entries(nodesData).filter(([_, data]) => (data.risk_score || 0) > 40 || (data.displacement || 0) > 40 || data.risk_level === 'HIGH' || data.risk_level === 'MEDIUM');
+  // ALWAYS sort nodes by risk_score descending so highest risk node is selected
+  const sortedNodes = Object.entries(nodesData).sort((a, b) => (b[1].risk_score || 0) - (a[1].risk_score || 0));
+  const highestRiskNodeEntry = sortedNodes[0] || ['N5', nodesData['N5'] || {}];
+  const targetNodeId = highestRiskNodeEntry[0];
+  const targetData = highestRiskNodeEntry[1] || {};
 
-  // Subsidence score > 40 threshold trigger
-  const exceedsSubsidenceThreshold = maxRiskScore > 40 || warningNodes.length > 0 || criticalNodes.length > 0;
+  const targetScore = Math.max(targetData.risk_score || 0, maxRiskScore);
+  const targetLevel = targetData.risk_level || overallMineLevel;
 
-  const isCritical = overallMineLevel === 'CRITICAL' || criticalNodes.length > 0 || demoMode === 'SUBSIDENCE' || maxRiskScore >= 75;
-  const isWarning = !isCritical && (exceedsSubsidenceThreshold || overallMineLevel === 'HIGH' || overallMineLevel === 'MEDIUM' || demoMode === 'WARNING');
-
-  const activeNodeInfo = criticalNodes.length > 0
-    ? criticalNodes[0]
-    : warningNodes.length > 0
-    ? warningNodes[0]
-    : ['N5', nodesData['N5'] || {}];
-
-  const targetNodeId = activeNodeInfo[0];
-  const targetData = activeNodeInfo[1] || {};
+  // Determine alert states
+  const isCritical = targetLevel === 'CRITICAL' || targetScore >= 75 || demoMode === 'SUBSIDENCE';
+  const exceeds40Threshold = targetScore > 40 || (targetData.displacement || 0) > 40;
+  const isWarning = !isCritical && (exceeds40Threshold || targetLevel === 'HIGH' || targetLevel === 'MEDIUM' || demoMode === 'WARNING');
 
   // Request browser Web Notification Permission explicitly
   const requestWebNotificationPermission = async () => {
@@ -46,7 +41,7 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
       setPermissionStatus(perm);
       if (perm === 'granted') {
         new Notification('MineGuard AI: Web Notifications Enabled', {
-          body: 'You will receive immediate computer notifications containing full criticality details whenever subsidence score > 40 or critical mine hazards occur.',
+          body: 'You will receive immediate computer notifications containing accurate node & score criticality details whenever subsidence score > 40 or critical mine hazards occur.',
           icon: '/favicon.svg'
         });
       }
@@ -57,13 +52,17 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
     }
   };
 
-  // Dispatch Native Web Desktop Notification when Subsidence > 40
+  // Dispatch Native Web Desktop Notification for highest risk node
   const triggerComputerNotification = async (force = false) => {
     if (typeof window === 'undefined' || !('Notification' in window)) return;
 
+    // Strict Check: ONLY trigger notification if score > 40 or isCritical or demoMode is active
+    if (!force && targetScore <= 40 && !isCritical && demoMode === 'NORMAL') {
+      return;
+    }
+
     let currentPerm = Notification.permission;
 
-    // Step 1: Take permission first if status is 'default'
     if (currentPerm === 'default') {
       currentPerm = await requestWebNotificationPermission();
     }
@@ -77,29 +76,33 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
     if (!force && now - lastNotificationTimeRef.current < 10000) return;
     lastNotificationTimeRef.current = now;
 
-    const riskScore = targetData.risk_score || maxRiskScore;
-    const levelStr = isCritical ? 'CRITICAL EMERGENCY' : 'SUBSIDENCE HAZARD (> 40)';
+    const levelStr = isCritical ? 'CRITICAL EMERGENCY' : `SUBSIDENCE HAZARD (SCORE: ${targetScore})`;
     const locationStr = targetNodeId === 'N5' ? 'Panel C - High Stress Zone' : targetNodeId === 'N3' ? 'Panel B - Active Extraction' : 'Underground Mine Seam';
 
     const title = isCritical
       ? `🚨 [CRITICAL SUBSIDENCE EMERGENCY] Node ${targetNodeId}`
       : `⚠️ [SUBSIDENCE WARNING (> 40 SCORE)] Node ${targetNodeId}`;
 
-    // Detailed criticality info in Web Notification
-    const bodyContent =
-      `SUBSIDENCE THRESHOLD EXCEEDED (> 40):\n` +
-      `• Subsidence Risk Score: ${riskScore}/100 (Threshold > 40 Exceeded!)\n` +
-      `• Level: ${levelStr}\n` +
-      `• Location: ${locationStr}\n` +
-      `• Displacement: ${targetData.displacement ?? 12.8}mm | Tilt: ${targetData.tilt ?? 4.5}°\n` +
-      `• Crack Growth: ${targetData.crack_width ?? 5.2}mm | Load: +${targetData.load_change ?? 55.0}kN\n` +
-      `• Required Action: ${isCritical ? 'IMMEDIATE UNDERGROUND EVACUATION REQUIRED!' : 'Increase strata monitoring & notify Panel C supervisor.'}`;
+    // Accurately format the notification body with exact targetScore and telemetry metrics
+    const bodyContent = isCritical
+      ? `CRITICAL SUBSIDENCE HAZARD:\n` +
+        `• Risk Score: ${targetScore}/100 (CRITICAL)\n` +
+        `• Affected Node: Node ${targetNodeId} (${locationStr})\n` +
+        `• Displacement: ${targetData.displacement ?? 12.8}mm | Tilt: ${targetData.tilt ?? 4.5}°\n` +
+        `• Crack Growth: ${targetData.crack_width ?? 5.2}mm | Load: +${targetData.load_change ?? 55.0}kN\n` +
+        `• Action: IMMEDIATE UNDERGROUND EVACUATION REQUIRED!`
+      : `SUBSIDENCE THRESHOLD EXCEEDED (> 40):\n` +
+        `• Risk Score: ${targetScore}/100 (Exceeds Safety Threshold 40)\n` +
+        `• Affected Node: Node ${targetNodeId} (${locationStr})\n` +
+        `• Displacement: ${targetData.displacement ?? 3.5}mm | Tilt: ${targetData.tilt ?? 1.8}°\n` +
+        `• Crack Growth: ${targetData.crack_width ?? 1.2}mm | Load: +${targetData.load_change ?? 18.0}kN\n` +
+        `• Action: Increase strata monitoring frequency & alert supervisor.`;
 
     const options = {
       body: bodyContent,
       icon: '/favicon.svg',
-      tag: `mineguard-subsidence-${isCritical ? 'critical' : 'warning'}-${targetNodeId}`,
-      requireInteraction: isCritical || riskScore > 50, // Keep notification open on desktop if score > 50
+      tag: `mineguard-alert-${targetNodeId}-${targetScore}`,
+      requireInteraction: isCritical || targetScore >= 60,
       renotify: true
     };
 
@@ -114,14 +117,14 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
     }
   };
 
-  // Auto-trigger permission & web notification when Subsidence > 40 or Warning/Critical hazard hits
+  // Auto-trigger permission & web notification when Warning/Critical or score > 40
   useEffect(() => {
-    if (isCritical || isWarning || exceedsSubsidenceThreshold) {
+    if ((isCritical || isWarning || exceeds40Threshold) && targetScore > 40) {
       setDismissed(false);
       setSmsSent(false);
       triggerComputerNotification(false);
     }
-  }, [isCritical, isWarning, exceedsSubsidenceThreshold, demoMode, maxRiskScore]);
+  }, [isCritical, isWarning, exceeds40Threshold, demoMode, targetScore, targetNodeId]);
 
   // Web Audio Siren Synthesis
   const toggleSiren = () => {
@@ -194,11 +197,11 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
   const handleSendSMS = () => {
     setSmsSent(true);
     setTimeout(() => {
-      alert(`[SMS GATEWAY DISPATCHED]\n\nEmergency SMS alert broadcasted to Mine Safety Director & DGMS Authority:\n"SUBSIDENCE HAZARD: MineGuard AI detected risk score ${maxRiskScore} (> 40) at Panel C. Subsidence alert active."`);
+      alert(`[SMS GATEWAY DISPATCHED]\n\nEmergency SMS alert broadcasted to Mine Safety Director & DGMS Authority:\n"SUBSIDENCE HAZARD: MineGuard AI detected risk score ${targetScore} at Node ${targetNodeId}. Subsidence alert active."`);
     }, 200);
   };
 
-  if ((!isCritical && !isWarning && !exceedsSubsidenceThreshold) || dismissed) {
+  if ((!isCritical && !isWarning && !exceeds40Threshold) || dismissed) {
     return null;
   }
 
@@ -238,7 +241,7 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
                 {isCritical ? '🚨 CRITICAL SUBSIDENCE HAZARD' : '⚠️ SUBSIDENCE SCORE > 40 THRESHOLD EXCEEDED'}
               </span>
 
-              <RiskBadge level={isCritical ? 'CRITICAL' : 'HIGH'} score={maxRiskScore} size="sm" />
+              <RiskBadge level={isCritical ? 'CRITICAL' : 'HIGH'} score={targetScore} size="sm" />
 
               {permissionStatus === 'granted' ? (
                 <span className="text-xs font-mono text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-500/30 flex items-center gap-1">
@@ -256,24 +259,24 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
 
             <h3 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
               {isCritical
-                ? `CRITICAL SUBSIDENCE ALERT — Node ${targetNodeId} (${targetData.risk_score || maxRiskScore}/100 Risk Score)`
-                : `SUBSIDENCE ALERT — Risk Score ${targetData.risk_score || maxRiskScore}/100 (> 40) at Node ${targetNodeId}`}
+                ? `CRITICAL SUBSIDENCE ALERT — Node ${targetNodeId} (${targetScore}/100 Risk Score)`
+                : `SUBSIDENCE ALERT — Node ${targetNodeId} (${targetScore}/100 Risk Score)`}
             </h3>
 
             {/* Criticality Info Summary Box */}
             <div className="bg-black/30 rounded-lg p-2.5 mt-1 border border-white/10 text-xs sm:text-sm text-slate-200 space-y-1">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px] sm:text-xs">
-                <div>Subsidence Score: <strong className="text-rose-400 font-bold">{targetData.risk_score || maxRiskScore}/100</strong></div>
-                <div>Displacement: <strong className="text-amber-300">{targetData.displacement || 12.8}mm</strong></div>
-                <div>Tilt Angle: <strong className="text-amber-300">{targetData.tilt || 4.5}°</strong></div>
-                <div>Crack Width: <strong className="text-amber-300">{targetData.crack_width || 5.2}mm</strong></div>
+                <div>Subsidence Score: <strong className="text-rose-400 font-bold">{targetScore}/100</strong></div>
+                <div>Displacement: <strong className="text-amber-300">{targetData.displacement ?? 12.8}mm</strong></div>
+                <div>Tilt Angle: <strong className="text-amber-300">{targetData.tilt ?? 4.5}°</strong></div>
+                <div>Crack Width: <strong className="text-amber-300">{targetData.crack_width ?? 5.2}mm</strong></div>
               </div>
               <p className="text-xs text-slate-300 border-t border-white/10 pt-1.5 flex items-center gap-1.5">
                 <Info className="w-4 h-4 text-amber-400 flex-shrink-0" />
                 <span>
                   {isCritical
                     ? 'IMMEDIATE ACTION: Underground seam evacuation recommended. Web notification dispatched to computer desktop.'
-                    : 'SUBSIDENCE > 40 EXCEEDED: Web notification sent to computer desktop. Increase strata monitoring frequency.'}
+                    : `SUBSIDENCE SCORE ${targetScore}/100 (> 40): Web notification sent to computer desktop. Increase strata monitoring frequency.`}
                 </span>
               </p>
             </div>
@@ -285,7 +288,7 @@ export const DashboardAlertBanner = ({ nodesData = {}, maxRiskScore = 0, overall
           <button
             onClick={() => triggerComputerNotification(true)}
             className="px-3 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-md bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400"
-            title="Push Web Notification (> 40 Subsidence Info) to Computer Desktop"
+            title="Push Web Notification with Full Criticality Info to Computer Desktop"
           >
             <Monitor className="w-4 h-4 text-white animate-pulse" />
             <span>{desktopNotified ? 'Resend Web Notif' : 'Send Web Notif'}</span>
